@@ -129,6 +129,20 @@ else
     echo "    WARNING: $SSH_PUBKEY not found - no SSH recovery access will be configured."
 fi
 
+echo "==> Setting wifi regulatory country (optional)"
+# wireless-regdb (always installed, see packages.txt) fixes the kernel's
+# regulatory.db failing to load at all - that part is universal. Which
+# country's channel/power rules to apply is location-specific and legal,
+# not something to guess or hardcode, so it's opt-in via this env var,
+# same pattern as SSH_PUBKEY above.
+if [[ -n "${WIFI_COUNTRY:-}" ]]; then
+    echo "$WIFI_COUNTRY" > "$PROFILE/airootfs/root/wifi-country"
+    echo "    will set WIRELESS_REGDOM=$WIFI_COUNTRY on the installed system"
+else
+    echo "    WIFI_COUNTRY not set - installed system keeps the (now-loadable) default regulatory domain"
+    echo "    set it yourself later: /etc/conf.d/wireless-regdom, or WIFI_COUNTRY=US ./build-iso.sh"
+fi
+
 echo "==> Setting ISO label/name"
 sed -i 's/^iso_name=.*/iso_name="arch-oneshot"/' "$PROFILE/profiledef.sh"
 sed -i 's/^iso_label=.*/iso_label="ARCH_OS_$(date +%Y%m)"/' "$PROFILE/profiledef.sh"

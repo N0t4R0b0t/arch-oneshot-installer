@@ -27,6 +27,12 @@ unzip
 rsync
 bash-completion
 
+# wireless-regdb pulls in iw as a dependency. Without it, the kernel logs
+# "failed to load regulatory.db" and falls back to an overly-conservative
+# default regulatory domain on every wifi chip - a real bug, not
+# hardware-specific (see README "Wifi reliability").
+wireless-regdb
+
 # --- fonts (Arch installs none by default - without these, XFCE/Firefox
 # render with fallback "tofu" boxes and generally look much worse) ---
 ttf-dejavu

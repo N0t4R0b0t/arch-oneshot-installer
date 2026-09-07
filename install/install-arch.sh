@@ -292,6 +292,11 @@ MIRRORLIST
 ROOT_UUID=$(blkid -s UUID -o value "$ROOT_PART")
 [[ -n "$ROOT_UUID" ]] || die "could not read the UUID of $ROOT_PART after formatting"
 
+# Optional, baked in by build-iso.sh only if WIFI_COUNTRY was set at build
+# time (location-specific/legal, never guessed - see build-iso.sh).
+WIFI_COUNTRY=""
+[[ -s "$SELF_DIR/wifi-country" ]] && WIFI_COUNTRY="$(cat "$SELF_DIR/wifi-country")"
+
 # Propagate the live ISO's own SSH recovery key (baked in by build-iso.sh, if
 # any) into the installed system, root's placed here so the chroot step below
 # can also copy it into ${USERNAME}'s home from the same source.
@@ -331,6 +336,11 @@ chmod 440 /etc/sudoers.d/10-wheel-install
 
 systemctl enable NetworkManager
 
+$(if [[ -n "$WIFI_COUNTRY" ]]; then
+cat <<REGDOM
+echo 'WIRELESS_REGDOM="${WIFI_COUNTRY}"' > /etc/conf.d/wireless-regdom
+REGDOM
+fi)
 # Wifi power-save is a known source of severe packet loss on older
 # Broadcom chips (brcmsmac) despite a strong signal - the exact symptom
 # found diagnosing this Air's own wifi (huge "misc" discards at -38dBm).
