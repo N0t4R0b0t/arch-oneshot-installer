@@ -8,7 +8,9 @@ linux-firmware
 linux-headers
 base-devel
 sudo
+vi
 vim
+nano
 git
 man-db
 man-pages

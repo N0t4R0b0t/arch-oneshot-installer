@@ -268,6 +268,22 @@ pacstrap -K -C "$OFFLINE_PACMAN_CONF" /mnt "${PKGS[@]}" || die "pacstrap failed"
 step "Generating fstab"
 genfstab -U /mnt >> /mnt/etc/fstab
 
+# pacstrap pulls in the `pacman-mirrorlist` package's stock file: every known
+# mirror worldwide, in no particular order, none ranked by speed/distance.
+# Left as-is, the first real pacman use on the installed system (AUR
+# bootstrap, or anything you install later) ends up trying mirrors mostly
+# sequentially and can look "hung" for a very long time on a slow/lossy
+# connection. A couple of known-fast, GeoIP-aware mirrors is far more
+# reliable than trying to rank the full list with reflector during install
+# (reflector's own mirror-status fetch needs a good connection too - the
+# exact thing we can't assume here). Re-run reflector yourself later for a
+# fully tailored list once you're on solid network.
+step "Setting a fast default mirrorlist for the installed system"
+cat > /mnt/etc/pacman.d/mirrorlist <<'MIRRORLIST'
+Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch
+Server = https://mirrors.kernel.org/archlinux/$repo/os/$arch
+MIRRORLIST
+
 # Needed below to hand-write refind_linux.conf with the correct root=. See
 # the refind-install comment further down for why we can't trust its guess.
 ROOT_UUID=$(blkid -s UUID -o value "$ROOT_PART")
@@ -320,6 +336,20 @@ echo "[Seat:*]" > /etc/lightdm/lightdm.conf.d/50-oneshot.conf
 echo "user-session=xfce" >> /etc/lightdm/lightdm.conf.d/50-oneshot.conf
 
 refind-install || echo "WARNING: refind-install reported an error - check ${LOG} and install it manually after first boot"
+
+# rEFInd finds other OSes by scanning partitions for known bootloader files
+# (e.g. macOS's /System/Library/CoreServices/boot.efi) - but it ships with
+# no built-in filesystem support of its own, so it can't even read an
+# HFS+/APFS volume's directory structure unless a matching filesystem
+# driver is dropped into its own drivers_x64 dir. refind-install only
+# copies one automatically when it detects it's running natively on Apple
+# hardware (via dmidecode), which isn't reliable from inside arch-chroot
+# during install. Copy it explicitly so a macOS dual-boot entry actually
+# shows up. (APFS has no rEFInd driver at all as of this writing - this
+# only helps HFS+-formatted macOS installs.)
+mkdir -p /boot/EFI/refind/drivers_x64
+cp /usr/share/refind/drivers_x64/hfs_x64.efi /boot/EFI/refind/drivers_x64/ 2>/dev/null \
+    || echo "WARNING: could not copy rEFInd's hfs_x64.efi driver - a macOS dual-boot entry may not appear. See ${LOG}."
 
 # refind-install tries to auto-generate /boot/refind_linux.conf by reading
 # the CURRENTLY RUNNING system's boot options - but "currently running"

@@ -125,6 +125,16 @@ Ethernet, both come free; if you don't, you get the same desktop minus VS
 Code and wifi, both installable later with `pacman`/`yay` once you're
 online by whatever means (e.g. `broadcom-wl-dkms` once booted).
 
+Separately: `pacstrap` pulls in the stock `pacman-mirrorlist` package,
+which is every known mirror worldwide in no particular order — not ranked
+by speed or distance. The installer overwrites it with a couple of known
+fast, GeoIP-aware mirrors (`geo.mirror.pkgbuild.com` +
+`mirrors.kernel.org`) so the *first* real `pacman`/`yay` use on the
+installed system isn't stuck crawling through slow or dead mirrors one by
+one. This happens unconditionally (it's just writing a file, no network
+needed) — run `reflector` yourself later for a list tailored to your
+actual location once you're on solid network.
+
 ## Remote recovery over SSH
 
 `build-iso.sh` bakes your public key (default `~/.ssh/id_ed25519.pub`, override
@@ -168,6 +178,19 @@ new install, which fails at `initrd-switch-root.service` on first real boot
 also refuses a password since the real root — where root's password
 lives — was never switched to). Overwriting it with the correct UUID after
 `refind-install` runs fixes this.
+
+It also copies rEFInd's `hfs_x64.efi` filesystem driver into
+`/boot/EFI/refind/drivers_x64/`. rEFInd finds other OSes by scanning
+partitions for known bootloader files (macOS's
+`/System/Library/CoreServices/boot.efi`), but it ships with no built-in
+filesystem support — without this driver it can't read an HFS+ volume's
+directory structure at all, so a dual-booted macOS install silently never
+shows up in the boot menu even though everything else about the dual-boot
+setup is correct. `refind-install` only copies this automatically when it
+detects real Apple hardware via `dmidecode`, which isn't reliable from
+inside `arch-chroot`. Note this only covers **HFS+**; rEFInd has no APFS
+driver at all as of this writing, so a modern APFS-formatted macOS won't
+be discoverable this way regardless.
 
 ## Known rough edges on the original target hardware (2011 MacBook Air)
 
