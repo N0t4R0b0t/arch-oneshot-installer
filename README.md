@@ -98,15 +98,13 @@ runs unattended once you've answered it.
   - `root` / `changeme-root`
   - `dev` / `changeme-dev`
 - **Only if network is available:** best-effort (non-fatal if it fails)
-  installs `install/aur-packages.txt` via `yay` — currently
-  `visual-studio-code-bin` and `broadcom-wl-dkms` (a MacBook-Air-specific
-  wifi driver — harmless no-op on other hardware, it just won't apply).
-  Failures here are logged to `/var/log/arch-oneshot-install.log` on the
-  installed system; the install still finishes and reboots either way. With
-  no network, this is skipped outright (not attempted, not a failure) —
-  `yay` itself is already installed either way (see below), so once you
-  have network just run `yay -S visual-studio-code-bin broadcom-wl-dkms`
-  yourself.
+  installs `install/aur-packages.txt` via `yay` — currently just
+  `visual-studio-code-bin`. Failures here are logged to
+  `/var/log/arch-oneshot-install.log` on the installed system; the install
+  still finishes and reboots either way. With no network, this is skipped
+  outright (not attempted, not a failure) — `yay` itself is already
+  installed either way (see below), so once you have network just run
+  `yay -S visual-studio-code-bin` yourself.
 - Installs `rEFInd` into the ESP so the boot picker shows both the existing
   OS (if dual-booting) and Arch.
 - Reboots. Remove the USB stick when prompted.
@@ -119,13 +117,13 @@ isn't configured at all during install (no credentials are baked in, so an
 unconfigured `iwd` will never associate with anything on its own); wired
 Ethernet, if plugged in, is used opportunistically for two things only:
 
-- the AUR extras (VS Code, the Broadcom wifi driver) described above
+- the AUR extras (VS Code) described above
 - [SSH recovery access](#remote-recovery-over-ssh), if something goes wrong
 
 Neither is required to end up with a working system. If you plug in wired
 Ethernet, both come free; if you don't, you get the same desktop minus VS
-Code and wifi, both installable later with `pacman`/`yay` once you're
-online by whatever means (e.g. `broadcom-wl-dkms` once booted).
+Code, installable later with `pacman`/`yay` once you're online by whatever
+means.
 
 Separately: `pacstrap` pulls in the stock `pacman-mirrorlist` package,
 which is every known mirror worldwide in no particular order — not ranked
@@ -177,10 +175,10 @@ time, where there's real network, and drops the resulting package into the
 same offline repo; `install-arch.sh` appends it explicitly to its
 `pacstrap` call. This means `yay` is **always** present on the installed
 system regardless of network state at install time — only the AUR
-packages you'd actually build *with* it afterwards (VS Code,
-`broadcom-wl-dkms`) stay best-effort/network-gated, since those genuinely
-need to be fetched at install time. Add more AUR-only packages the same
-way by appending to `AUR_BUILD_PKGS` in `build-iso.sh` — but prefer an
+packages you'd actually build *with* it afterwards (currently just VS
+Code) stay best-effort/network-gated, since those genuinely need to be
+fetched at install time. Add more AUR-only packages the same way by
+appending to `AUR_BUILD_PKGS` in `build-iso.sh` — but prefer an
 official-repo alternative when one exists (see below: this was tried for
 the theme package and dropped for exactly that reason).
 
@@ -231,17 +229,37 @@ inside `arch-chroot`. Note this only covers **HFS+**; rEFInd has no APFS
 driver at all as of this writing, so a modern APFS-formatted macOS won't
 be discoverable this way regardless.
 
+## Wifi reliability
+
+On the original MacBook Air's Broadcom BCM43224, the in-kernel `brcmsmac`
+driver was found (on real hardware, via `/proc/net/wireless`) to drop a
+huge number of packets — over 200,000 "misc" discards — despite an
+excellent -38dBm signal. That's a known symptom of `brcmsmac`'s
+power-management implementation on this chip family, not a range/signal
+problem. There is **no working driver-package fix**: the proprietary
+`broadcom-wl` (`wl.ko`) was already dropped from Arch's official repos for
+not supporting current kernels, and its AUR `broadcom-wl-dkms` wrapper —
+what earlier versions of this README/`aur-packages.txt` pointed at — no
+longer exists on the AUR at all (confirmed via the AUR RPC search API).
+
+The actual fix `install-arch.sh` applies, for every install regardless of
+hardware: disable wifi power-save entirely, via
+`/etc/NetworkManager/conf.d/wifi-powersave-off.conf` (`wifi.powersave =
+2`). This is a documented ArchWiki-level fix for exactly this class of
+symptom on older Broadcom chips, not something invented for this project,
+and it's harmless on hardware that doesn't need it. If wifi is still
+unreliable after this on your machine, a USB wifi adapter is a real,
+confirmed-working fallback — the same real-hardware test that found the
+`brcmsmac` packet loss also confirmed a USB adapter had none of it.
+
 ## Known rough edges on the original target hardware (2011 MacBook Air)
 
 These are specific to the machine this was first built for, not this
 project generically — see [Roadmap](#roadmap--todo) for making
 hardware/driver choices ask instead of assume:
 
-- **Wifi/Bluetooth**: the Broadcom BCM4331 needs `broadcom-wl-dkms`
-  (AUR). The install attempts this automatically over the wired
-  connection; if it fails (network hiccup, AUR down, kernel/dkms mismatch),
-  you'll have working Ethernet but no wifi until you run
-  `yay -S broadcom-wl-dkms` by hand.
+- **Wifi**: see "Wifi reliability" below — this isn't a simple missing
+  driver, and there's no working package fix as of this writing.
 - **Trackpad**: basic pointer/click works via the in-kernel driver +
   libinput out of the box. Multi-touch gestures are not tuned; expect to
   hand-tweak `libinput` config if you want them.

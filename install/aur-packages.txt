@@ -1,6 +1,14 @@
-# Best-effort AUR packages, built with a bootstrapped `yay` as the regular
-# user during the automated install. Failures here are LOGGED, not fatal -
-# the install continues and finishes a working system either way.
+# Best-effort AUR packages, installed via yay as the regular user during
+# the automated install (only if network is up). Failures here are
+# LOGGED, not fatal - the install continues and finishes a working system
+# either way.
 
 visual-studio-code-bin
-broadcom-wl-dkms
+
+# broadcom-wl-dkms used to be listed here for the 2011 MacBook Air's wifi
+# chip - it no longer exists on the AUR (confirmed via the AUR RPC search
+# API, not just a guess) and would always fail with "target not found".
+# The proprietary wl.ko driver it wrapped was already dropped from Arch's
+# official repos for not supporting current kernels; its AUR dkms wrapper
+# appears to have died for the same reason, with nothing replacing it. See
+# README "Wifi reliability" for what actually helps this chip instead.

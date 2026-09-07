@@ -45,8 +45,8 @@ sed -i "s|^Include = /etc/pacman.d/mirrorlist|Include = $PROFILE/mirrorlist-arch
 
 echo "==> Removing packages no longer in Arch's official repos"
 # broadcom-wl (precompiled) was dropped from extra - it doesn't support
-# current kernels. We already install broadcom-wl-dkms from AUR post-boot
-# (see install/aur-packages.txt), so the live ISO itself doesn't need it.
+# current kernels, and its AUR dkms wrapper has since disappeared too
+# (see README "Wifi reliability") - nothing replaces it, so just drop it.
 sed -i '/^broadcom-wl$/d' "$PROFILE/packages.x86_64"
 
 echo "==> Downloading target-system packages for a fully offline install"
@@ -56,7 +56,7 @@ echo "==> Downloading target-system packages for a fully offline install"
 # install/packages.txt here (where we do have network) and embed it as a
 # local pacman repo inside the ISO; the installer installs from that local
 # repo only. Network on the Mac stays purely optional, for the best-effort
-# AUR extras (VS Code, broadcom-wl-dkms) and for SSH recovery access.
+# AUR extras (VS Code) and for SSH recovery access.
 PKG_CACHE="$HERE/build/pkgcache"
 mkdir -p "$PKG_CACHE"
 mapfile -t TARGET_PKGS < <(grep -v '^\s*#' "$HERE/install/packages.txt" | grep -v '^\s*$')

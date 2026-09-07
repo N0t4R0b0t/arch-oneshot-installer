@@ -52,10 +52,10 @@ step "Checking for network (optional - base install works fully offline)"
 # ---------------------------------------------------------------------------
 # The base install pulls packages from the offline repo embedded in this ISO
 # (see build-iso.sh) and never needs network. Network is only used, best
-# effort, for the AUR extras (VS Code, broadcom-wl-dkms) and for SSH
-# recovery access - neither is required to finish a working system. Wifi
-# isn't auto-configured (no credentials baked in), so unless wired Ethernet
-# is plugged in this will typically come back "no network", and that's fine.
+# effort, for the AUR extras (VS Code) and for SSH recovery access -
+# neither is required to finish a working system. Wifi isn't auto-
+# configured (no credentials baked in), so unless wired Ethernet is
+# plugged in this will typically come back "no network", and that's fine.
 NET_OK=0
 for i in $(seq 1 5); do
     if curl -fsS --max-time 3 https://archlinux.org >/dev/null 2>&1; then
@@ -330,6 +330,17 @@ echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/10-wheel-install
 chmod 440 /etc/sudoers.d/10-wheel-install
 
 systemctl enable NetworkManager
+
+# Wifi power-save is a known source of severe packet loss on older
+# Broadcom chips (brcmsmac) despite a strong signal - the exact symptom
+# found diagnosing this Air's own wifi (huge "misc" discards at -38dBm).
+# Disabling it is a well-documented ArchWiki-level fix, not hardware-
+# specific to this Air, so it's set for every install.
+mkdir -p /etc/NetworkManager/conf.d
+cat > /etc/NetworkManager/conf.d/wifi-powersave-off.conf <<'POWERSAVE'
+[connection]
+wifi.powersave = 2
+POWERSAVE
 systemctl enable lightdm
 
 echo "exec startxfce4" > /home/${USERNAME}/.xinitrc
@@ -402,15 +413,15 @@ then
 fi
 
 if [[ $NET_OK -eq 1 ]]; then
-    step "Installing best-effort AUR packages (VS Code, Broadcom wifi driver) via yay"
+    step "Installing best-effort AUR packages (VS Code) via yay"
     mapfile -t AUR_PKGS < <(grep -v '^\s*#' "$AUR_PACKAGES_FILE" | grep -v '^\s*$')
     for pkg in "${AUR_PKGS[@]}"; do
         arch-chroot /mnt runuser -u "${USERNAME}" -- yay -S --noconfirm --removemake "$pkg" \
             || echo "WARNING: AUR package '$pkg' failed to install - continuing. See ${LOG}."
     done
 else
-    step "Skipping AUR extras (VS Code, Broadcom wifi driver) - no network"
-    echo "    yay is already installed - once online, run: yay -S visual-studio-code-bin broadcom-wl-dkms"
+    step "Skipping AUR extras (VS Code) - no network"
+    echo "    yay is already installed - once online, run: yay -S visual-studio-code-bin"
 fi
 
 step "Locking down sudo (password required from here on)"
@@ -444,9 +455,9 @@ cat <<SSHNOTE
 #
 SSHNOTE
 fi)# Known rough edges to expect (see README.md):
-#   - Wifi/Bluetooth may not work depending on whether the AUR
-#     broadcom-wl-dkms build above succeeded (check
-#     /var/log/arch-oneshot-install.log).
+#   - Wifi power-save is disabled system-wide (see README "Wifi
+#     reliability") - this chip's in-kernel driver is known to drop
+#     huge numbers of packets with it left on, even at full signal.
 #   - Trackpad gestures beyond basic pointer/click may need tuning.
 ############################################################
 DONE
