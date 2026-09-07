@@ -166,24 +166,29 @@ the finished desktop (enable it yourself later if you want it). `openssh` is
 still pulled in either way by `install/packages.txt` since it's a normal
 thing to want on a dev workstation regardless of this feature.
 
-## yay is built into the offline repo
+## AUR-only packages are built into the offline repo
 
-`yay` (the AUR helper) isn't in Arch's official repos, so it can't be
+Two packages this install needs (`yay` the AUR helper, and `arc-gtk-theme`
+for the login screen) aren't in Arch's official repos, so they can't be
 pulled into the offline repo the same way as everything else in
-`packages.txt` (`pacman -Syw` only resolves official packages). Instead,
-`build-iso.sh` builds `yay-bin` (the prebuilt-binary AUR package — no Go
-toolchain needed) on your machine at ISO-build time, where there's real
-network, and drops the resulting package into the same offline repo.
-`install-arch.sh` then pacstraps it like anything else. This means `yay`
-is **always** present on the installed system, regardless of network state
-at install time — only the AUR packages you'd actually build *with* it
-(VS Code, `broadcom-wl-dkms`) stay best-effort/network-gated, since those
-genuinely need to be fetched at install time.
+`packages.txt` (`pacman -Syw` only resolves official packages — that's why
+neither is listed there). Instead, `build-iso.sh` builds both from AUR
+(`yay-bin` — prebuilt binary, no Go toolchain needed — and `arc-gtk-theme`
+itself) on your machine at ISO-build time, where there's real network, and
+drops the resulting packages into the same offline repo; `install-arch.sh`
+appends them explicitly to its `pacstrap` call. This means both are
+**always** present on the installed system regardless of network state at
+install time — only the AUR packages you'd actually build *with* `yay`
+afterwards (VS Code, `broadcom-wl-dkms`) stay best-effort/network-gated,
+since those genuinely need to be fetched at install time. Add more
+AUR-only packages the same way by appending to `AUR_BUILD_PKGS` in
+`build-iso.sh` and to the `pacstrap` line in `install-arch.sh`.
 
 ## Login screen theme
 
 `lightdm-gtk-greeter`'s default look is bare, unthemed Adwaita.
-`packages.txt` now includes `arc-gtk-theme` and `papirus-icon-theme`, and
+`arc-gtk-theme` (built into the offline repo, see above) and
+`papirus-icon-theme` (official, in `packages.txt`) fix that;
 `install-arch.sh` writes `/etc/lightdm/lightdm-gtk-greeter.conf` to use
 them (dark theme, matching icons, a plain dark background color — no image
 asset shipped, to keep the repo text-only). This only themes the greeter
@@ -306,9 +311,9 @@ ext4 or swap partition on it (i.e. Arch already got installed there).
   embedded offline repo. It persists across builds (not wiped by
   `build-iso.sh`) so re-running the build only re-downloads what changed.
   Delete it yourself for a fully clean re-fetch.
-- `build/yay-build/` — scratch clone/build dir for `yay-bin` (see "yay is
-  built into the offline repo"). Wiped and rebuilt on every run of
-  `build-iso.sh`, unlike `pkgcache/`.
+- `build/aur-build/` — scratch clone/build dir for the AUR-only packages
+  (see "AUR-only packages are built into the offline repo"). Wiped and
+  rebuilt on every run of `build-iso.sh`, unlike `pkgcache/`.
 
 ## License
 

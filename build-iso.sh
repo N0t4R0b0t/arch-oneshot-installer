@@ -65,30 +65,35 @@ sudo pacman -Syw --noconfirm \
     --config "$PROFILE/pacman.conf" \
     --cachedir "$PKG_CACHE" \
     --dbpath "$PROFILE/pacman.db.tmp" \
-    "${TARGET_PKGS[@]}"
+    "${TARGET_PKGS[@]}" < /dev/null
 sudo rm -rf "$PROFILE/pacman.db.tmp"
 
 OFFLINE_REPO="$PROFILE/airootfs/root/offline-repo"
 mkdir -p "$OFFLINE_REPO"
 cp "$PKG_CACHE"/*.pkg.tar.zst "$OFFLINE_REPO/"
 
-echo "==> Building yay so it's available offline (no runtime network needed)"
-# yay isn't in the official repos - it's AUR only - so it can't go through
-# the pacman -Syw closure above. Build yay-bin (prebuilt binary release, no
-# Go toolchain needed) here where there's network, and drop it into the
-# same offline repo. install-arch.sh then pacstraps it like any other
-# package; the old approach (git clone + build at runtime on the Mac) was
-# best-effort and skipped entirely without network - this makes it
-# unconditional.
+echo "==> Building AUR-only packages so they're available offline (no runtime network needed)"
+# A few packages pacstrap needs aren't in the official repos - pacman -Syw
+# above can't resolve AUR packages - so they're built here (where there's
+# network) and dropped into the same offline repo:
+#   - yay: the AUR helper itself. Old approach (git clone + build at
+#     runtime on the target) was best-effort and skipped entirely without
+#     network; this makes it unconditional.
+#   - arc-gtk-theme: the login-screen/GTK theme (see README "Login screen
+#     theme") - also AUR-only.
 command -v makepkg >/dev/null 2>&1 || {
     echo "makepkg not found - installing base-devel"
     sudo pacman -S --needed --noconfirm base-devel
 }
-YAY_BUILD_DIR="$HERE/build/yay-build"
-rm -rf "$YAY_BUILD_DIR"
-git clone --depth=1 https://aur.archlinux.org/yay-bin.git "$YAY_BUILD_DIR"
-( cd "$YAY_BUILD_DIR" && makepkg -s --noconfirm )
-cp "$YAY_BUILD_DIR"/*.pkg.tar.zst "$OFFLINE_REPO/"
+AUR_BUILD_PKGS=(yay-bin arc-gtk-theme)
+AUR_BUILD_DIR="$HERE/build/aur-build"
+rm -rf "$AUR_BUILD_DIR"
+mkdir -p "$AUR_BUILD_DIR"
+for pkg in "${AUR_BUILD_PKGS[@]}"; do
+    git clone --depth=1 "https://aur.archlinux.org/${pkg}.git" "$AUR_BUILD_DIR/$pkg"
+    ( cd "$AUR_BUILD_DIR/$pkg" && makepkg -s --noconfirm )
+    cp "$AUR_BUILD_DIR/$pkg"/*.pkg.tar.zst "$OFFLINE_REPO/"
+done
 
 ( cd "$OFFLINE_REPO" && repo-add oneshot-offline.db.tar.gz ./*.pkg.tar.zst >/dev/null )
 echo "    offline repo size: $(du -sh "$OFFLINE_REPO" | cut -f1)"
