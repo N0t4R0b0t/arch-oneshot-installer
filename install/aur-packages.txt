@@ -5,10 +5,6 @@
 
 visual-studio-code-bin
 
-# broadcom-wl-dkms used to be listed here for the 2011 MacBook Air's wifi
-# chip - it no longer exists on the AUR (confirmed via the AUR RPC search
-# API, not just a guess) and would always fail with "target not found".
-# The proprietary wl.ko driver it wrapped was already dropped from Arch's
-# official repos for not supporting current kernels; its AUR dkms wrapper
-# appears to have died for the same reason, with nothing replacing it. See
-# README "Wifi reliability" for what actually helps this chip instead.
+# broadcom-wl-dkms (this Air's wifi driver) is NOT here - it's an official
+# package now (see packages.txt), installed unconditionally offline, no
+# network/AUR needed. See README "Wifi reliability" for the history.

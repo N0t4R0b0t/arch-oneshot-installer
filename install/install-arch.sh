@@ -465,9 +465,9 @@ cat <<SSHNOTE
 #
 SSHNOTE
 fi)# Known rough edges to expect (see README.md):
-#   - Wifi power-save is disabled system-wide (see README "Wifi
-#     reliability") - this chip's in-kernel driver is known to drop
-#     huge numbers of packets with it left on, even at full signal.
+#   - If this machine has a Broadcom wifi chip, broadcom-wl-dkms (the
+#     official driver) takes over from the in-kernel driver automatically
+#     - see README "Wifi reliability" if wifi seems inactive after boot.
 #   - Trackpad gestures beyond basic pointer/click may need tuning.
 ############################################################
 DONE

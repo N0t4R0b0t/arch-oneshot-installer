@@ -33,6 +33,18 @@ bash-completion
 # hardware-specific (see README "Wifi reliability").
 wireless-regdb
 
+# Broadcom's own official STA driver, covering BCM4311 through BCM4360
+# (including this Air's BCM43224) - now in Arch's official `extra` repo
+# (it used to be AUR-only and did briefly disappear from there, but is
+# actively maintained again as of this writing). Its own
+# /usr/lib/modprobe.d/broadcom-wl-dkms.conf blacklists the in-kernel
+# brcmsmac/bcma/b43/brcmfmac drivers automatically, so it just takes over
+# - no extra blacklist config needed here. Built via dkms against
+# linux-headers (above) by a pacman hook during pacstrap, same mechanism
+# mkinitcpio already relies on - no network needed at install time.
+# Harmless no-op on hardware without a Broadcom chip it supports.
+broadcom-wl-dkms
+
 # --- fonts (Arch installs none by default - without these, XFCE/Firefox
 # render with fallback "tofu" boxes and generally look much worse) ---
 ttf-dejavu

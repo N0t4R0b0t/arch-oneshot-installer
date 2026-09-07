@@ -44,9 +44,12 @@ EOF
 sed -i "s|^Include = /etc/pacman.d/mirrorlist|Include = $PROFILE/mirrorlist-arch|" "$PROFILE/pacman.conf"
 
 echo "==> Removing packages no longer in Arch's official repos"
-# broadcom-wl (precompiled) was dropped from extra - it doesn't support
-# current kernels, and its AUR dkms wrapper has since disappeared too
-# (see README "Wifi reliability") - nothing replaces it, so just drop it.
+# broadcom-wl (precompiled, non-dkms) was dropped from extra - it doesn't
+# support current kernels. This only affects the LIVE ISO's own package
+# set (releng's default packages.x86_64) - the live medium doesn't need a
+# wifi driver at all since the base install is fully offline. The target
+# system gets the actively-maintained broadcom-wl-dkms instead, via
+# install/packages.txt (see README "Wifi reliability").
 sed -i '/^broadcom-wl$/d' "$PROFILE/packages.x86_64"
 
 echo "==> Downloading target-system packages for a fully offline install"

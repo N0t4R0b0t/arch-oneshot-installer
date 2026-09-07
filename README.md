@@ -232,57 +232,49 @@ be discoverable this way regardless.
 ## Wifi reliability
 
 On the original MacBook Air's Broadcom BCM43224, the in-kernel `brcmsmac`
-driver was found (on real hardware, via `/proc/net/wireless`) to drop a
-huge number of packets — over 200,000 "misc" discards — despite an
-excellent -38dBm signal. Two real, distinct issues were found and fixed;
-a third turned out to have no fix, after genuinely exhausting the options.
+driver was found (on real hardware) to drop a huge number of packets —
+over 200,000 "misc" discards via `/proc/net/wireless`, despite an
+excellent -38dBm signal — and throughput under real load never exceeded
+~9KB/s even after other fixes. The actual fix is `broadcom-wl-dkms`,
+Broadcom's own official STA driver: `packages.txt` installs it
+unconditionally now. It briefly went AUR-only and (at one point) fully
+disappeared from the AUR entirely, which is what an earlier version of
+this README concluded was a dead end — but it's since been promoted into
+Arch's **official `extra` repository** and is actively maintained there,
+which the earlier research missed. Confirmed via live testing on the
+actual hardware: switching from `brcmsmac` to `wl` took sustained
+throughput from ~9KB/s to **1.6MB/s** — roughly a 180x improvement, not a
+marginal one. Its own `/usr/lib/modprobe.d/broadcom-wl-dkms.conf`
+blacklists the conflicting in-kernel drivers (`brcmsmac`, `bcma`, `b43`,
+`brcmfmac`, others) automatically, so it just takes over without any
+extra configuration from this project. It builds via `dkms` against
+`linux-headers` (already in `packages.txt`) during `pacstrap`, the same
+pacman-hook mechanism `mkinitcpio` already relies on — no network needed
+at install time, and it's a harmless no-op on hardware without a
+supported Broadcom chip.
 
-**Fixed: the kernel's regulatory database wasn't loading at all.**
-`dmesg` showed `cfg80211: failed to load regulatory.db` on every boot,
-because `wireless-regdb` (which also pulls in `iw`) wasn't installed —
-the kernel was silently falling back to an overly conservative default
-domain instead of a real one. This is a genuine, generic bug (not
-hardware-specific) and now-fixed by installing `wireless-regdb`
-(`packages.txt`). Confirmed via live testing: fixing just this, then
-setting the correct country, took ping loss from 33% (with multi-second
-latency spikes) to 0%, and turned a `curl` that couldn't complete at all
-into one that actually finished, several hundred times faster than
-before — still slow, but a real, measured improvement. Which country's
-channel/power rules apply is a location/legal choice, not something to
-guess, so it's opt-in: `WIFI_COUNTRY=US ./build-iso.sh` (any ISO-3166
-alpha-2 code). Without it, the database still loads correctly — you get a
-sane default instead of a broken one — just without a specific country's
-rules applied; set `/etc/conf.d/wireless-regdom` yourself later if needed.
+Two smaller, genuinely-real fixes are also applied, independent of the
+driver switch above:
 
-**Fixed (partially, on chips that honor it): wifi power-save.**
-`install-arch.sh` also disables it globally via
-`/etc/NetworkManager/conf.d/wifi-powersave-off.conf` (`wifi.powersave =
-2`) — a documented fix for this class of symptom on older Broadcom chips
-in general. On the BCM43224 specifically, `dmesg` showed
-`brcms_ops_config: change power-save mode: false (implement)` — that
-`(implement)` suffix is `brcmsmac`'s own placeholder marker for an
-unimplemented callback, meaning this particular chip's driver silently
-ignores the request. Kept anyway since it's correct and harmless, and
-does work on chips whose driver actually implements it.
+- **`wireless-regdb`** (`packages.txt`, pulls in `iw`) — without it,
+  `dmesg` showed `cfg80211: failed to load regulatory.db` on every boot,
+  a real, generic kernel-level bug (not hardware-specific), and the
+  kernel silently fell back to an overly conservative default domain.
+  Which country's channel/power rules apply is a location/legal choice,
+  not something to guess, so setting one is opt-in: `WIFI_COUNTRY=US
+  ./build-iso.sh` (any ISO-3166 alpha-2 code). Without it, the database
+  still loads correctly — a sane default instead of a broken one — just
+  without a specific country's rules applied.
+- **Wifi power-save disabled globally**, via
+  `/etc/NetworkManager/conf.d/wifi-powersave-off.conf` (`wifi.powersave =
+  2`) — a documented fix for a known class of Broadcom power-management
+  bugs. `wl` isn't known to need this, but it's harmless, and helps on
+  other chips whose driver actually implements the toggle (some in-kernel
+  drivers, `brcmsmac` included, log the request but silently no-op it).
 
-**Not fixable: remaining packet loss under real load.** Even after both
-fixes above, sustained transfers still triggered large "misc" discard
-spikes and very slow throughput — `dmesg` repeatedly logs
-`brcms_c_d11hdrs_mac80211: AC_VO txop exceeded`, a TX timing/queue
-calculation issue inside `brcmsmac` itself. This was researched
-thoroughly, not assumed unfixable: `brcmsmac` is confirmed the correct
-driver for this PCIe chip (`brcmfmac` is for USB/SDIO devices, not
-applicable); the proprietary `broadcom-wl` (`wl.ko`) was dropped from
-Arch's official repos for not supporting current kernels, and its AUR
-`broadcom-wl-dkms` wrapper no longer exists on the AUR at all (confirmed
-via the AUR RPC search API, not assumed); community forks on GitHub are
-archived/unmaintained with kernel support capped at 5.17; and the txop
-warning itself has been present in-tree since `brcmsmac` was mainlined
-over a decade ago, with upstream's only related patch being about log
-spam, not the underlying behavior — i.e. even upstream doesn't treat it
-as a fixable bug. **A USB wifi adapter is the confirmed-working
-alternative** — the same real-hardware testing that found all of the
-above also confirmed a USB adapter had none of this driver's issues.
+If you're on hardware without a Broadcom chip `wl` supports, none of this
+applies to you and the base system just uses whatever driver is already
+in-kernel, as normal.
 
 ## Known rough edges on the original target hardware (2011 MacBook Air)
 
@@ -290,8 +282,8 @@ These are specific to the machine this was first built for, not this
 project generically — see [Roadmap](#roadmap--todo) for making
 hardware/driver choices ask instead of assume:
 
-- **Wifi**: see "Wifi reliability" below — this isn't a simple missing
-  driver, and there's no working package fix as of this writing.
+- **Wifi**: fixed — see [Wifi reliability](#wifi-reliability) above for
+  what was actually wrong and how `broadcom-wl-dkms` fixes it.
 - **Trackpad**: basic pointer/click works via the in-kernel driver +
   libinput out of the box. Multi-touch gestures are not tuned; expect to
   hand-tweak `libinput` config if you want them.
