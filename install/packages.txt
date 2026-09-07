@@ -21,6 +21,17 @@ usbutils
 pciutils
 htop
 reflector
+curl
+less
+unzip
+rsync
+bash-completion
+
+# --- fonts (Arch installs none by default - without these, XFCE/Firefox
+# render with fallback "tofu" boxes and generally look much worse) ---
+ttf-dejavu
+ttf-liberation
+noto-fonts
 
 # --- bootloader (dual boot with the existing macOS EFI) ---
 refind
@@ -52,6 +63,8 @@ xfce4
 xfce4-goodies
 lightdm
 lightdm-gtk-greeter
+arc-gtk-theme
+papirus-icon-theme
 network-manager-applet
 xarchiver
 gvfs

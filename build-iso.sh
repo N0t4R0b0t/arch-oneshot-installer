@@ -71,6 +71,25 @@ sudo rm -rf "$PROFILE/pacman.db.tmp"
 OFFLINE_REPO="$PROFILE/airootfs/root/offline-repo"
 mkdir -p "$OFFLINE_REPO"
 cp "$PKG_CACHE"/*.pkg.tar.zst "$OFFLINE_REPO/"
+
+echo "==> Building yay so it's available offline (no runtime network needed)"
+# yay isn't in the official repos - it's AUR only - so it can't go through
+# the pacman -Syw closure above. Build yay-bin (prebuilt binary release, no
+# Go toolchain needed) here where there's network, and drop it into the
+# same offline repo. install-arch.sh then pacstraps it like any other
+# package; the old approach (git clone + build at runtime on the Mac) was
+# best-effort and skipped entirely without network - this makes it
+# unconditional.
+command -v makepkg >/dev/null 2>&1 || {
+    echo "makepkg not found - installing base-devel"
+    sudo pacman -S --needed --noconfirm base-devel
+}
+YAY_BUILD_DIR="$HERE/build/yay-build"
+rm -rf "$YAY_BUILD_DIR"
+git clone --depth=1 https://aur.archlinux.org/yay-bin.git "$YAY_BUILD_DIR"
+( cd "$YAY_BUILD_DIR" && makepkg -s --noconfirm )
+cp "$YAY_BUILD_DIR"/*.pkg.tar.zst "$OFFLINE_REPO/"
+
 ( cd "$OFFLINE_REPO" && repo-add oneshot-offline.db.tar.gz ./*.pkg.tar.zst >/dev/null )
 echo "    offline repo size: $(du -sh "$OFFLINE_REPO" | cut -f1)"
 # PKG_CACHE at build/pkgcache is intentionally NOT wiped between builds (it's

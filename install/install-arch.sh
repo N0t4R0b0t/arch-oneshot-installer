@@ -263,7 +263,10 @@ SigLevel = Never
 Server = file://${OFFLINE_REPO_DIR}
 EOF
 mapfile -t PKGS < <(grep -v '^\s*#' "$PACKAGES_FILE" | grep -v '^\s*$')
-pacstrap -K -C "$OFFLINE_PACMAN_CONF" /mnt "${PKGS[@]}" || die "pacstrap failed"
+# yay isn't in packages.txt (it's AUR, not official) - build-iso.sh builds
+# it separately and drops it into the same offline repo, so it's always
+# available here regardless of runtime network.
+pacstrap -K -C "$OFFLINE_PACMAN_CONF" /mnt "${PKGS[@]}" yay || die "pacstrap failed"
 
 step "Generating fstab"
 genfstab -U /mnt >> /mnt/etc/fstab
@@ -335,6 +338,17 @@ mkdir -p /etc/lightdm/lightdm.conf.d
 echo "[Seat:*]" > /etc/lightdm/lightdm.conf.d/50-oneshot.conf
 echo "user-session=xfce" >> /etc/lightdm/lightdm.conf.d/50-oneshot.conf
 
+# lightdm-gtk-greeter's default look is bare Adwaita with no icon theme
+# set - give it the theme+icons already pulled in by packages.txt instead.
+cat > /etc/lightdm/lightdm-gtk-greeter.conf <<'GREETER'
+[greeter]
+theme-name = Arc-Dark
+icon-theme-name = Papirus-Dark
+font-name = Sans 10
+background = #2b2b2b
+indicators = ~host;~spacer;~clock;~spacer;~session;~power
+GREETER
+
 refind-install || echo "WARNING: refind-install reported an error - check ${LOG} and install it manually after first boot"
 
 # rEFInd finds other OSes by scanning partitions for known bootloader files
@@ -388,26 +402,15 @@ then
 fi
 
 if [[ $NET_OK -eq 1 ]]; then
-    step "Bootstrapping an AUR helper (yay) as ${USERNAME} - best effort"
-    arch-chroot /mnt runuser -u "${USERNAME}" -- bash -c '
-        set -e
-        cd /home/'"${USERNAME}"'
-        git clone https://aur.archlinux.org/yay-bin.git
-        cd yay-bin
-        makepkg -si --noconfirm
-    ' || echo "WARNING: yay bootstrap failed - AUR packages (VS Code, broadcom-wl-dkms) were NOT installed. See ${LOG}."
-
-    if arch-chroot /mnt command -v yay >/dev/null 2>&1; then
-        step "Installing best-effort AUR packages (VS Code, Broadcom wifi driver)"
-        mapfile -t AUR_PKGS < <(grep -v '^\s*#' "$AUR_PACKAGES_FILE" | grep -v '^\s*$')
-        for pkg in "${AUR_PKGS[@]}"; do
-            arch-chroot /mnt runuser -u "${USERNAME}" -- yay -S --noconfirm --removemake "$pkg" \
-                || echo "WARNING: AUR package '$pkg' failed to install - continuing. See ${LOG}."
-        done
-    fi
+    step "Installing best-effort AUR packages (VS Code, Broadcom wifi driver) via yay"
+    mapfile -t AUR_PKGS < <(grep -v '^\s*#' "$AUR_PACKAGES_FILE" | grep -v '^\s*$')
+    for pkg in "${AUR_PKGS[@]}"; do
+        arch-chroot /mnt runuser -u "${USERNAME}" -- yay -S --noconfirm --removemake "$pkg" \
+            || echo "WARNING: AUR package '$pkg' failed to install - continuing. See ${LOG}."
+    done
 else
     step "Skipping AUR extras (VS Code, Broadcom wifi driver) - no network"
-    echo "    install later with: yay -S visual-studio-code-bin broadcom-wl-dkms"
+    echo "    yay is already installed - once online, run: yay -S visual-studio-code-bin broadcom-wl-dkms"
 fi
 
 step "Locking down sudo (password required from here on)"

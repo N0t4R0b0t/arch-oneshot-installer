@@ -89,22 +89,24 @@ runs unattended once you've answered it.
   EFI System Partition (512MiB), swap partition (4G), and ext4 root
   partition, using the whole disk.
 - Installs base Arch + XFCE (X11, not Wayland — see rationale below) +
-  LightDM + Firefox + rEFInd, via `install/packages.txt` — entirely from
-  the offline repo embedded in the ISO, no network needed. (Package list is
-  currently fixed, not asked about — see [Roadmap](#roadmap--todo).)
+  LightDM (themed — see below) + Firefox + rEFInd + `yay`, via
+  `install/packages.txt` — entirely from the offline repo embedded in the
+  ISO, no network needed. (Package list is currently fixed, not asked
+  about — see [Roadmap](#roadmap--todo).)
 - Sets hostname `arch-oneshot`, creates `root` and a regular user `dev`,
   both with placeholder passwords forced to change at first login:
   - `root` / `changeme-root`
   - `dev` / `changeme-dev`
 - **Only if network is available:** best-effort (non-fatal if it fails)
-  bootstraps `yay` and installs `install/aur-packages.txt` — currently
+  installs `install/aur-packages.txt` via `yay` — currently
   `visual-studio-code-bin` and `broadcom-wl-dkms` (a MacBook-Air-specific
   wifi driver — harmless no-op on other hardware, it just won't apply).
   Failures here are logged to `/var/log/arch-oneshot-install.log` on the
   installed system; the install still finishes and reboots either way. With
   no network, this is skipped outright (not attempted, not a failure) —
-  install these yourself later with `yay -S visual-studio-code-bin` once
-  you have `yay` and a network connection.
+  `yay` itself is already installed either way (see below), so once you
+  have network just run `yay -S visual-studio-code-bin broadcom-wl-dkms`
+  yourself.
 - Installs `rEFInd` into the ESP so the boot picker shows both the existing
   OS (if dual-booting) and Arch.
 - Reboots. Remove the USB stick when prompted.
@@ -163,6 +165,31 @@ placeholder passwords over the network. With no key, sshd stays disabled on
 the finished desktop (enable it yourself later if you want it). `openssh` is
 still pulled in either way by `install/packages.txt` since it's a normal
 thing to want on a dev workstation regardless of this feature.
+
+## yay is built into the offline repo
+
+`yay` (the AUR helper) isn't in Arch's official repos, so it can't be
+pulled into the offline repo the same way as everything else in
+`packages.txt` (`pacman -Syw` only resolves official packages). Instead,
+`build-iso.sh` builds `yay-bin` (the prebuilt-binary AUR package — no Go
+toolchain needed) on your machine at ISO-build time, where there's real
+network, and drops the resulting package into the same offline repo.
+`install-arch.sh` then pacstraps it like anything else. This means `yay`
+is **always** present on the installed system, regardless of network state
+at install time — only the AUR packages you'd actually build *with* it
+(VS Code, `broadcom-wl-dkms`) stay best-effort/network-gated, since those
+genuinely need to be fetched at install time.
+
+## Login screen theme
+
+`lightdm-gtk-greeter`'s default look is bare, unthemed Adwaita.
+`packages.txt` now includes `arc-gtk-theme` and `papirus-icon-theme`, and
+`install-arch.sh` writes `/etc/lightdm/lightdm-gtk-greeter.conf` to use
+them (dark theme, matching icons, a plain dark background color — no image
+asset shipped, to keep the repo text-only). This only themes the greeter
+itself; the XFCE session you log into still uses its own defaults, though
+the same theme/icon packages are available if you want to set them there
+too (`xfce4-appearance-settings` after first login).
 
 ## rEFInd boot configuration
 
@@ -279,6 +306,9 @@ ext4 or swap partition on it (i.e. Arch already got installed there).
   embedded offline repo. It persists across builds (not wiped by
   `build-iso.sh`) so re-running the build only re-downloads what changed.
   Delete it yourself for a fully clean re-fetch.
+- `build/yay-build/` — scratch clone/build dir for `yay-bin` (see "yay is
+  built into the offline repo"). Wiped and rebuilt on every run of
+  `build-iso.sh`, unlike `pkgcache/`.
 
 ## License
 
