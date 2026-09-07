@@ -263,10 +263,10 @@ SigLevel = Never
 Server = file://${OFFLINE_REPO_DIR}
 EOF
 mapfile -t PKGS < <(grep -v '^\s*#' "$PACKAGES_FILE" | grep -v '^\s*$')
-# yay and arc-gtk-theme aren't in packages.txt (both AUR, not official) -
-# build-iso.sh builds them separately and drops them into the same offline
-# repo, so they're always available here regardless of runtime network.
-pacstrap -K -C "$OFFLINE_PACMAN_CONF" /mnt "${PKGS[@]}" yay arc-gtk-theme || die "pacstrap failed"
+# yay isn't in packages.txt (it's AUR, not official) - build-iso.sh builds
+# it separately and drops it into the same offline repo, so it's always
+# available here regardless of runtime network.
+pacstrap -K -C "$OFFLINE_PACMAN_CONF" /mnt "${PKGS[@]}" yay || die "pacstrap failed"
 
 step "Generating fstab"
 genfstab -U /mnt >> /mnt/etc/fstab
@@ -342,7 +342,7 @@ echo "user-session=xfce" >> /etc/lightdm/lightdm.conf.d/50-oneshot.conf
 # set - give it the theme+icons already pulled in by packages.txt instead.
 cat > /etc/lightdm/lightdm-gtk-greeter.conf <<'GREETER'
 [greeter]
-theme-name = Arc-Dark
+theme-name = Materia-dark
 icon-theme-name = Papirus-Dark
 font-name = Sans 10
 background = #2b2b2b

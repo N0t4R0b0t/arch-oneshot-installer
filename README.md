@@ -166,35 +166,42 @@ the finished desktop (enable it yourself later if you want it). `openssh` is
 still pulled in either way by `install/packages.txt` since it's a normal
 thing to want on a dev workstation regardless of this feature.
 
-## AUR-only packages are built into the offline repo
+## yay is built into the offline repo
 
-Two packages this install needs (`yay` the AUR helper, and `arc-gtk-theme`
-for the login screen) aren't in Arch's official repos, so they can't be
+`yay` (the AUR helper) isn't in Arch's official repos, so it can't be
 pulled into the offline repo the same way as everything else in
 `packages.txt` (`pacman -Syw` only resolves official packages — that's why
-neither is listed there). Instead, `build-iso.sh` builds both from AUR
-(`yay-bin` — prebuilt binary, no Go toolchain needed — and `arc-gtk-theme`
-itself) on your machine at ISO-build time, where there's real network, and
-drops the resulting packages into the same offline repo; `install-arch.sh`
-appends them explicitly to its `pacstrap` call. This means both are
-**always** present on the installed system regardless of network state at
-install time — only the AUR packages you'd actually build *with* `yay`
-afterwards (VS Code, `broadcom-wl-dkms`) stay best-effort/network-gated,
-since those genuinely need to be fetched at install time. Add more
-AUR-only packages the same way by appending to `AUR_BUILD_PKGS` in
-`build-iso.sh` and to the `pacstrap` line in `install-arch.sh`.
+it isn't listed there). Instead, `build-iso.sh` builds `yay-bin` (prebuilt
+binary, no Go toolchain needed) from AUR on your machine at ISO-build
+time, where there's real network, and drops the resulting package into the
+same offline repo; `install-arch.sh` appends it explicitly to its
+`pacstrap` call. This means `yay` is **always** present on the installed
+system regardless of network state at install time — only the AUR
+packages you'd actually build *with* it afterwards (VS Code,
+`broadcom-wl-dkms`) stay best-effort/network-gated, since those genuinely
+need to be fetched at install time. Add more AUR-only packages the same
+way by appending to `AUR_BUILD_PKGS` in `build-iso.sh` — but prefer an
+official-repo alternative when one exists (see below: this was tried for
+the theme package and dropped for exactly that reason).
 
 ## Login screen theme
 
 `lightdm-gtk-greeter`'s default look is bare, unthemed Adwaita.
-`arc-gtk-theme` (built into the offline repo, see above) and
-`papirus-icon-theme` (official, in `packages.txt`) fix that;
-`install-arch.sh` writes `/etc/lightdm/lightdm-gtk-greeter.conf` to use
-them (dark theme, matching icons, a plain dark background color — no image
-asset shipped, to keep the repo text-only). This only themes the greeter
-itself; the XFCE session you log into still uses its own defaults, though
-the same theme/icon packages are available if you want to set them there
-too (`xfce4-appearance-settings` after first login).
+`packages.txt` now includes `materia-gtk-theme` and `papirus-icon-theme`
+(both official — no AUR needed), and `install-arch.sh` writes
+`/etc/lightdm/lightdm-gtk-greeter.conf` to use them (Materia-dark theme,
+matching icons, a plain dark background color — no image asset shipped, to
+keep the repo text-only). This only themes the greeter itself; the XFCE
+session you log into still uses its own defaults, though the same
+theme/icon packages are available if you want to set them there too
+(`xfce4-appearance-settings` after first login).
+
+(`arc-gtk-theme` was tried here first, built from AUR the same way as
+`yay` — but its upstream release tarball is missing git-submodule content
+its `meson` build needs, a problem in that package itself, unrelated to
+anything here. `materia-gtk-theme` is a well-maintained equivalent
+available directly in the official repos, so it was used instead rather
+than fighting a broken AUR package.)
 
 ## rEFInd boot configuration
 

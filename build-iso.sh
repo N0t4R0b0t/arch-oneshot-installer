@@ -73,19 +73,20 @@ mkdir -p "$OFFLINE_REPO"
 cp "$PKG_CACHE"/*.pkg.tar.zst "$OFFLINE_REPO/"
 
 echo "==> Building AUR-only packages so they're available offline (no runtime network needed)"
-# A few packages pacstrap needs aren't in the official repos - pacman -Syw
-# above can't resolve AUR packages - so they're built here (where there's
-# network) and dropped into the same offline repo:
-#   - yay: the AUR helper itself. Old approach (git clone + build at
-#     runtime on the target) was best-effort and skipped entirely without
-#     network; this makes it unconditional.
-#   - arc-gtk-theme: the login-screen/GTK theme (see README "Login screen
-#     theme") - also AUR-only.
+# yay itself isn't in the official repos - pacman -Syw above can't resolve
+# AUR packages - so it's built here (where there's network) and dropped
+# into the same offline repo. Old approach (git clone + build at runtime
+# on the target) was best-effort and skipped entirely without network;
+# this makes it unconditional. Add more AUR-only packages here the same
+# way if needed - but prefer an official-repo alternative when one exists
+# (see the login-screen theme choice in README: arc-gtk-theme was tried
+# here first and dropped - its upstream tarball is missing git-submodule
+# content its build needs, unrelated to anything in this script).
 command -v makepkg >/dev/null 2>&1 || {
     echo "makepkg not found - installing base-devel"
     sudo pacman -S --needed --noconfirm base-devel
 }
-AUR_BUILD_PKGS=(yay-bin arc-gtk-theme)
+AUR_BUILD_PKGS=(yay-bin)
 AUR_BUILD_DIR="$HERE/build/aur-build"
 rm -rf "$AUR_BUILD_DIR"
 mkdir -p "$AUR_BUILD_DIR"

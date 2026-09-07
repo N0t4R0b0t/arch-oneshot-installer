@@ -63,12 +63,11 @@ xfce4
 xfce4-goodies
 lightdm
 lightdm-gtk-greeter
+materia-gtk-theme
 papirus-icon-theme
 network-manager-applet
 xarchiver
 gvfs
-# arc-gtk-theme is AUR-only (not in official repos) - build-iso.sh builds
-# it separately into the offline repo, see install-arch.sh's pacstrap line.
 
 # --- browser ---
 firefox
