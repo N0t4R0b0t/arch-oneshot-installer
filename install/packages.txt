@@ -1,0 +1,66 @@
+# Pacstrap package list for the 2011 MacBook Air (MacBookAir4,1/4,2).
+# One package per line. Lines starting with # are ignored.
+
+# --- base system ---
+base
+linux
+linux-firmware
+linux-headers
+base-devel
+sudo
+vim
+git
+man-db
+man-pages
+openssh
+networkmanager
+network-manager-applet
+usbutils
+pciutils
+htop
+reflector
+
+# --- bootloader (dual boot with the existing macOS EFI) ---
+refind
+efibootmgr
+dosfstools
+
+# --- filesystems ---
+e2fsprogs
+
+# --- graphics: Intel HD 3000 (Sandy Bridge) ---
+xf86-video-intel
+mesa
+vulkan-intel
+
+# --- input: MacBookAir trackpad/keyboard ride on in-kernel drivers + libinput ---
+xf86-input-libinput
+
+# --- audio ---
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+alsa-utils
+
+# --- desktop: XFCE on X11 ---
+xorg-server
+xorg-xinit
+xfce4
+xfce4-goodies
+lightdm
+lightdm-gtk-greeter
+network-manager-applet
+xarchiver
+gvfs
+
+# --- browser ---
+firefox
+
+# --- backend dev workstation basics ---
+tmux
+zsh
+# Language runtimes (python/go/node/jdk/rustup/docker) are deliberately left
+# out here since the stack wasn't specified - base-devel above covers the
+# "core build tool" ask (gcc, make, binutils, etc). Add what you need with
+# pacman once you're booted in.

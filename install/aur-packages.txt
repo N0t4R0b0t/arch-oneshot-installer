@@ -1,0 +1,6 @@
+# Best-effort AUR packages, built with a bootstrapped `yay` as the regular
+# user during the automated install. Failures here are LOGGED, not fatal -
+# the install continues and finishes a working system either way.
+
+visual-studio-code-bin
+broadcom-wl-dkms
